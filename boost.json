@@ -1,0 +1,16 @@
+{
+    "agents": [
+        "claude_code",
+        "codex",
+        "opencode",
+        "zed"
+    ],
+    "cloud": false,
+    "guidelines": false,
+    "mcp": true,
+    "nightwatch": false,
+    "packages": [
+        "pestphp/pest-plugin-agent"
+    ],
+    "skills": []
+}

@@ -1,0 +1,5 @@
+{
+  "blade_leaders": ["{{--"],
+  "include": ["*.php", "*.blade.php"],
+  "exclude": [":!vendor", ":!node_modules", ":!storage", ":!dist", ":!build", ":!*.md"]
+}

@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "enabled": true,
+    "events": {
+      "PreToolUse": [
+        {
+          "matcher": "Bash",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash \"${ZCODE_PROJECT_DIR}/.opencode/gates/no-memory.sh\"",
+              "statusMessage": "no-memory gate"
+            }
+          ]
+        },
+        {
+          "matcher": "[Mm]emory",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "echo 'BLOCKED: memory tools are banned in this repo. Record durable knowledge in beads issues instead: bd create / bd update <id> --notes.' >&2; exit 2",
+              "statusMessage": "no-memory gate"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
