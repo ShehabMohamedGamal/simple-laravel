@@ -55,6 +55,9 @@ skills/
 .windsurf/
 .github/copilot-instructions.md
 
+# ── Beads issue store (JSON, not code) ────────────────────────────────
+.beads/
+
 # ── codebase-index's own cache (never index yourself) ─────────────────
 .claude/cache/codebase-index/
 
