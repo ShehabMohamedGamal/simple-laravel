@@ -18,6 +18,10 @@ Open every grilling interview with the session setup in `docs/agents/grilling-se
 
 Docs fallthrough: MCP → `docs/agents/llms/` slices → Context7 (max 2) → web. See `docs/agents/docs-retrieval.md`.
 
+### AI rules
+
+`.ai/rules/` holds code conventions scoped by glob. Read `.ai/rules/index.md` and every rule file whose globs match the paths you are editing before you write code.
+
 ### Verification
 
 Stage the work and run `composer verify` before you commit. Treat gate failures as findings and fix them.
