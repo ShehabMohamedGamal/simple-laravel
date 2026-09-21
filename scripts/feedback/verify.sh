@@ -34,7 +34,7 @@ run_gate type-coverage env PAO_FORCE=1 vendor/bin/pest --type-coverage --min=80
 
 run_report pint vendor/bin/pint --test --format=json
 run_report deptrac vendor/bin/deptrac analyse --no-progress
-run_report phpstan env PAO_FORCE=1 vendor/bin/phpstan analyse
+run_report phpstan env PAO_FORCE=1 vendor/bin/phpstan analyse --memory-limit=1G
 run_report lsp php scripts/feedback/lsp.php
 run_report mutation sh scripts/feedback/mutation.sh
 run_report crap sh scripts/feedback/crap.sh
