@@ -1,11 +1,5 @@
 {
     "$schema": "https://opencode.ai/config.json",
-    "plugin": [
-        "opencode-openai-codex-auth",
-        "opencode-pty",
-        "@opencode-trace/plugin",
-        "./.opencode/plugins/rtk.ts"
-    ],
     "mcp": {
         "laravel-boost": {
             "type": "local",
@@ -24,5 +18,10 @@
                 "chrome-devtools-mcp@latest"
             ]
         }
-    }
+    },
+    "plugins": [
+        "opencode-openai-codex-auth",
+        "opencode-pty",
+        "@opencode-trace/plugin"
+    ]
 }

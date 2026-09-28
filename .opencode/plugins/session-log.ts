@@ -1,19 +1,10 @@
-import type { Plugin } from "@opencode-ai/plugin";
+// Session log (v2). Appends one line per tool call, user message, and todo
+// update to .opencode/logs/<root-session>/session.md, and maintains a
+// `current` pointer file. AFK marks sessions that have a parentID chain
+// (subagent runs); HITL marks top-level interactive sessions.
 
-declare function require(name: string): {
-  mkdirSync(path: string, options: { recursive: boolean }): void;
-  appendFileSync(path: string, data: string): void;
-  writeFileSync(path: string, data: string): void;
-};
-declare const process: { cwd(): string };
-
-const { mkdirSync, appendFileSync, writeFileSync } = require("node:fs");
-
-interface SessionInfo {
-  id?: string;
-  parentID?: string;
-  agent?: string;
-}
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 function now(): string {
   return new Date().toISOString();
@@ -24,81 +15,131 @@ function gist(value: unknown, max: number): string {
   return text.length > max ? text.slice(0, max) + "…" : text;
 }
 
-export const SessionLog: Plugin = async (ctx) => {
-  const dirs = new Map<string, string>();
-  const rootCache = new Map<string, { dir: string; afk: boolean; agent: string }>();
+interface SessionInfo {
+  id?: string;
+  parentID?: string;
+  agent?: string;
+}
 
-  async function inspect(sessionID: string): Promise<{ dir: string; afk: boolean; agent: string }> {
-    const cached = rootCache.get(sessionID);
-    if (cached) return cached;
-    let root = sessionID;
-    let afk = false;
-    let agent = "";
-    try {
-      const client = (ctx as unknown as { client?: { session: { get(args: { path: { id: string } } }): Promise<SessionInfo> } } }).client;
-      if (client) {
+interface PluginContextV2 {
+  session: {
+    get(input: { sessionID: string }): Promise<SessionInfo>;
+  };
+  tool: {
+    hook(
+      name: "execute.before" | "execute.after",
+      callback: (event: never) => Promise<void> | void,
+    ): Promise<unknown>;
+  };
+  event: {
+    subscribe(options?: {
+      signal?: AbortSignal;
+    }): AsyncIterable<{ type: string; properties?: Record<string, unknown> }>;
+  };
+}
+
+interface ToolExecuteAfterEvent {
+  tool?: string;
+  sessionID?: string;
+  input?: Record<string, unknown>;
+}
+
+export default {
+  id: "session-log",
+  setup: async (ctx: PluginContextV2) => {
+    const rootCache = new Map<string, { dir: string; afk: boolean; agent: string }>();
+    const logsRoot = join(process.cwd(), ".opencode", "logs");
+
+    async function inspect(
+      sessionID: string,
+    ): Promise<{ dir: string; afk: boolean; agent: string }> {
+      const cached = rootCache.get(sessionID);
+      if (cached) return cached;
+      let root = sessionID;
+      let afk = false;
+      let agent = "";
+      try {
         let id = sessionID;
         for (let hop = 0; hop < 8; hop++) {
-          const info = await client.session.get({ path: { id } });
+          const info = await ctx.session.get({ sessionID: id });
           const parent = info?.parentID;
           if (!parent) break;
           afk = true;
           root = parent;
           id = parent;
         }
-        const top = await client.session.get({ path: { id: root } });
+        const top = await ctx.session.get({ sessionID: root });
         agent = top?.agent ?? "";
+      } catch {}
+      const dir = join(logsRoot, root);
+      const entry = { dir, afk, agent };
+      rootCache.set(sessionID, entry);
+      if (!afk) {
+        try {
+          mkdirSync(logsRoot, { recursive: true });
+          writeFileSync(join(logsRoot, "current"), dir);
+        } catch {}
       }
-    } catch {}
-    const dir = process.cwd() + "/.opencode/logs/" + root;
-    const entry = { dir, afk, agent };
-    rootCache.set(sessionID, entry);
-    if (!afk) {
+      return entry;
+    }
+
+    async function append(sessionID: string, line: string): Promise<void> {
       try {
-        mkdirSync(process.cwd() + "/.opencode/logs", { recursive: true });
-        writeFileSync(process.cwd() + "/.opencode/logs/current", dir);
+        const { dir } = await inspect(sessionID);
+        mkdirSync(dir, { recursive: true });
+        appendFileSync(join(dir, "session.md"), "- " + now() + " " + line + "\n");
       } catch {}
     }
-    return entry;
-  }
 
-  async function append(sessionID: string, line: string): Promise<void> {
-    try {
-      const { dir } = await inspect(sessionID);
-      mkdirSync(dir, { recursive: true });
-      appendFileSync(dir + "/session.md", "- " + now() + " " + line + "\n");
-    } catch {}
-  }
+    await ctx.tool.hook("execute.after", (raw: unknown) => {
+      const event = raw as ToolExecuteAfterEvent;
+      try {
+        const sessionID = String(event?.sessionID ?? "");
+        if (!sessionID) return;
+        const tool = String(event?.tool ?? "unknown");
+        const args = (event?.input ?? {}) as Record<string, unknown>;
+        const detail = gist(
+          args.command ?? args.filePath ?? args.path ?? args.pattern ?? args.query ?? "",
+          120,
+        );
+        return inspect(sessionID).then(({ afk, agent }) =>
+          append(
+            sessionID,
+            "[" + (afk ? "AFK" : "HITL") + "]" + (agent ? " [" + agent + "]" : "") +
+              " tool=" + tool + (detail ? ": " + detail : ""),
+          ),
+        );
+      } catch {}
+    });
 
-  return {
-    "tool.execute.after": async (input, output) => {
-      try {
-        const tool = (input as { tool?: string }).tool ?? "unknown";
-        const sessionID = (input as { sessionID?: string }).sessionID ?? "";
-        if (!sessionID) return;
-        const { afk, agent } = await inspect(sessionID);
-        const args = (output as { args?: Record<string, unknown> }).args ?? {};
-        const detail = gist(args.command ?? args.filePath ?? args.path ?? args.pattern ?? args.query ?? "", 120);
-        const tags = "[" + (afk ? "AFK" : "HITL") + "]" + (agent ? " [" + agent + "]" : "");
-        await append(sessionID, tags + " tool=" + tool + (detail ? ": " + detail : ""));
-      } catch {}
-    },
-    "message.updated": async (input) => {
-      try {
-        const message = (input as { message?: { info?: { role?: string; sessionID?: string }; text?: string } }).message;
-        const info = message?.info;
-        if (!info?.sessionID || info.role !== "user") return;
-        await append(info.sessionID, "[HITL] user message (" + gist(message?.text ?? "", 120).length + " chars)");
-      } catch {}
-    },
-    "todo.updated": async (input) => {
-      try {
-        const todos = (input as { todos?: Array<{ content?: string; status?: string }> }).todos;
-        if (!todos || todos.length === 0) return;
-        const sessionID = (input as { sessionID?: string }).sessionID ?? "";
-        if (!sessionID) return;
-        await append(sessionID, "[todos] " + todos.length + " items, first: " + gist(todos[0]?.content, 80) + " (" + (todos[0]?.status ?? "?") + ")");
-      } catch {}
-    },
-  };
+    const controller = new AbortController();
+    void (async () => {
+      for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
+        try {
+          const props = (event?.properties ?? {}) as Record<string, unknown>;
+          if (event?.type === "message.updated") {
+            const message = props.message as
+              | { info?: { role?: string; sessionID?: string }; text?: string }
+              | undefined;
+            const info = message?.info ?? (props.info as SessionInfo | undefined);
+            const sessionID = info?.sessionID ?? String(props.sessionID ?? "");
+            if (!sessionID || (info?.role ?? message?.info?.role) !== "user") continue;
+            const text = message?.text ?? (props.text as string | undefined) ?? "";
+            await append(sessionID, "[HITL] user message (" + gist(text, 120).length + " chars)");
+          } else if (event?.type === "todo.updated") {
+            const todos = props.todos as Array<{ content?: string; status?: string }> | undefined;
+            const sessionID = String(props.sessionID ?? "");
+            if (!todos || todos.length === 0 || !sessionID) continue;
+            await append(
+              sessionID,
+              "[todos] " + todos.length + " items, first: " +
+                gist(todos[0]?.content, 80) + " (" + (todos[0]?.status ?? "?") + ")",
+            );
+          }
+        } catch {}
+      }
+    })();
+
+    return () => controller.abort();
+  },
 };
