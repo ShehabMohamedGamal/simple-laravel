@@ -31,6 +31,8 @@ Thumbs.db
 *.db
 .beads-credential-key
 .beads/proxieddb/
+# Beads per-machine config (managed by init-beads-convention.sh)
+.beads/config.yaml
 
 # OpenCode local deps
 .opencode/node_modules/
