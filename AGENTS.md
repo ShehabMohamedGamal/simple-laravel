@@ -36,8 +36,9 @@ Manual tools:  `vendor/bin/rector --dry-run` (refactor preview; rector sits outs
 
 These rules govern all prose an agent produces: replies, tickets, PRDs, review comments, commit messages, docs.
 
-- Write in active voice, one idea per sentence. Name the actor. Prefer facts and numbers over feelings.
-- Prefer the plain word ("use", not "utilize"). Cut filler ("in order to" becomes "to") and hedging.
+- use a conversational style
+- Write in active voice, one idea per sentence. Name the actor. 
+-  Cut filler ("in order to" becomes "to") and hedging.
 - No AI tells: no em dashes, no puffery ("crucial", "seamless", "pivotal"), no "not just X, but Y", no bold-label list items that restate their own line, sentence-case headings, no chatbot phrases ("I hope this helps", "Great question!").
 - Use the exact terms in `CONTEXT.md`'s glossary. If a concept has no glossary term, flag it instead of inventing one.
 - When writing for the user, lean toward Simplified Technical English (short declarative sentences, common words) where it doesn't cost precision. Preference, not mandate.
