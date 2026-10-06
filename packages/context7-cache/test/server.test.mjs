@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { createServer, request } from "node:http";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { test } from "node:test";
-import { createMcpServer } from "./context7-cache.mjs";
+import { createMcpServer } from "../src/server.mjs";
 
 async function listen(server) {
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -11,7 +12,7 @@ async function listen(server) {
 }
 
 async function fixture(t, options = {}) {
-  const cacheDir = await mkdtemp("/tmp/opencode/context7-test-");
+  const cacheDir = await mkdtemp(join(process.env.OPENCODE_TEST_TMP || tmpdir(), "context7-test-"));
   let calls = 0;
   const upstream = createServer((req, res) => {
     calls++;

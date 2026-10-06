@@ -1,10 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { homedir } from "node:os";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { platformPaths } from "./settings.mjs";
 
 const DAY = 86_400_000;
 const VERSIONS = ["2025-06-18", "2025-11-25"];
@@ -45,7 +44,7 @@ const TOOLS = [
 
 class CachedContext7 {
   constructor(options) {
-    this.dir = options.cacheDir ?? process.env.CTX7_CACHE_DIR ?? join(process.env.XDG_CACHE_HOME || join(homedir(), ".cache"), "context7-cache");
+    this.dir = options.cacheDir ?? process.env.CTX7_CACHE_DIR ?? platformPaths().cache;
     mkdirSync(this.dir, { recursive: true, mode: 0o700 });
     this.apiUrl = options.apiUrl ?? "https://context7.com/api";
     this.keys = options.apiKeys ?? ["CONTEXT7_API_KEY", ...Array.from({ length: 50 }, (_, i) => `CONTEXT7_API_KEY${i + 1}`)].map((name) => process.env[name]).filter(Boolean);
@@ -167,6 +166,16 @@ export function createMcpServer(options = {}) {
       const hosts = [`127.0.0.1:${server.address().port}`, `localhost:${server.address().port}`];
       if (!hosts.includes(req.headers.host)) return error(403, -32600, "Invalid Host");
       if (req.headers.origin && !hosts.map((host) => `http://${host}`).includes(req.headers.origin)) return error(403, -32600, "Invalid Origin");
+      if (options.control && ["/health", "/shutdown"].includes(req.url)) {
+        if (req.headers.authorization !== `Bearer ${options.control.token}`) return send(403, { error: "Forbidden" });
+        if (req.url === "/health" && req.method === "GET") return send(200, { name: "context7-cache", version: "0.1.0", pid: process.pid, cacheDir: client.dir });
+        if (req.url === "/shutdown" && req.method === "POST") {
+          send(200, { stopped: true });
+          setImmediate(() => server.close());
+          return;
+        }
+        return send(405);
+      }
       if (req.headers["mcp-protocol-version"] && !VERSIONS.includes(req.headers["mcp-protocol-version"])) return error(400, -32600, "Unsupported protocol version");
       if (req.url !== "/mcp") return send(404);
       if (req.method !== "POST") { res.setHeader("Allow", "POST"); return send(405); }
@@ -185,7 +194,7 @@ export function createMcpServer(options = {}) {
       if (!Object.hasOwn(message, "id")) return send(202);
       let result;
       if (message.method === "initialize") {
-        result = { protocolVersion: VERSIONS.includes(message.params?.protocolVersion) ? message.params.protocolVersion : VERSIONS.at(-1), capabilities: { tools: {} }, serverInfo: { name: "context7-cache", version: "1.0.0" } };
+        result = { protocolVersion: VERSIONS.includes(message.params?.protocolVersion) ? message.params.protocolVersion : VERSIONS.at(-1), capabilities: { tools: {} }, serverInfo: { name: "context7-cache", version: "0.1.0" } };
       } else if (message.method === "ping") result = {};
       else if (message.method === "tools/list") result = { tools: TOOLS };
       else if (message.method === "tools/call") {
@@ -204,12 +213,4 @@ export function createMcpServer(options = {}) {
   });
   server.closeAsync = () => new Promise((done, reject) => server.close((err) => err ? reject(err) : done()));
   return server;
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const port = Number(process.env.CTX7_PORT ?? 3777);
-  const server = createMcpServer();
-  server.listen(port, "127.0.0.1", () => console.error(`Context7 cache MCP listening at http://127.0.0.1:${port}/mcp`));
-  server.on("error", (err) => { console.error(err.message); process.exitCode = 1; });
-  for (const signal of ["SIGTERM", "SIGINT"]) process.on(signal, () => server.close());
 }

@@ -103,31 +103,35 @@ Codebase Index also needs Python and an installed `codebase-index` CLI. See the 
 
 ### Context7 setup
 
-The cache is a standalone Streamable HTTP MCP server supporting protocol revisions `2025-06-18` and `2025-11-25`. It does not support legacy SSE or older batch-based revisions. It uses Node 22 or newer, has no npm dependencies, and binds only to `127.0.0.1`. Install it on Linux with a systemd user manager:
+The standalone package in [`packages/context7-cache`](packages/context7-cache/README.md) works on Windows, Linux, and macOS with Node 22 or newer. It has no runtime dependencies. The package README covers installation, HTTP and stdio client setup, platform storage, optional autostart, and migration from the earlier Linux installer.
 
 ```sh
-export CONTEXT7_API_KEY="your-key-here"
-sh scripts/install-context7-cache.sh
+cd packages/context7-cache
+npm test
+npm pack
+npm install --global ./context7-cache-mcp-0.1.0.tgz
+context7-cache setup
+context7-cache start
 opencode mcp add context7 --global --url http://127.0.0.1:3777/mcp
 opencode mcp list
 ```
 
-Set `oauth: false` on the `context7` entry under `mcp.servers` in global OpenCode config. The installer copies the server to `~/.local/bin/context7-cache.mjs`, saves service settings and API keys in the owner-only `~/.config/context7-cache.env`, and enables `context7-cache.service` at user login. It respects `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`. Run the installer again after changing the source or exported settings.
+Set `oauth: false` on the `context7` entry under `mcp.servers` in global OpenCode config. `setup` stores API keys in protected user-level settings. No API key belongs in each MCP client. The package is not published to npm; distribute its `.tgz` file today.
 
-Configure other MCP clients to use the same Streamable HTTP URL, `http://127.0.0.1:3777/mcp`, instead of the official Context7 endpoint. Client configuration formats differ. No Context7 API key is needed in each client. The endpoint trusts local processes and is not intended for network exposure. It rejects foreign browser origins and Host headers.
+Configure other MCP clients to use the same Streamable HTTP URL, `http://127.0.0.1:3777/mcp`, instead of the official Context7 endpoint. For subprocess-based clients, use `context7-cache stdio`. The bridge starts or reuses the same server. The endpoint binds to loopback, trusts local processes, and must not be exposed to the network.
 
 The tools are `resolve-library-id`, `query-docs`, `cache-stats`, and `cache-clear`. Resolve results expire after 30 days; docs expire after 7 days. Cache hits work without API keys. Simultaneous identical requests share one upstream call. Errors are not cached, and HTTP 429 responses rotate through `CONTEXT7_API_KEY` and `CONTEXT7_API_KEY1` through `CONTEXT7_API_KEY50`.
 
-The service reuses the old plugin's cache format and directory, normally `~/.cache/context7-cache`. `CTX7_CACHE_DIR` overrides the directory. `CTX7_CACHE_TTL_SEARCH_MS` and `CTX7_CACHE_TTL_DOCS_MS` override expiry, `CTX7_CACHE_DISABLED=1` bypasses the cache, and `CTX7_PORT` changes the listening port. Update client URLs when changing the port. `cache-clear` accepts a library/query substring for new entries; old entries match their stored content because they have no query metadata.
+The service retains the old plugin's cache format. The package README lists native platform directories and environment overrides. `context7-cache autostart enable` optionally registers startup at user login; package installation does not enable it.
 
 ```sh
-systemctl --user status context7-cache.service
-systemctl --user restart context7-cache.service
-journalctl --user -u context7-cache.service
-node --test scripts/test-context7-cache.mjs
+context7-cache status
+context7-cache logs
+context7-cache stop
+context7-cache start
 ```
 
-Without systemd, run `node scripts/context7-cache.mjs` with the same exported environment variables. Keep that process running while clients use it.
+Use `context7-cache serve` for a foreground run. Tests and packed-release installation checks run in the three-platform GitHub Actions matrix.
 
 ### Codebase index setup
 
@@ -278,7 +282,7 @@ QUEUE_CONNECTION=database
 Optional integrations:
 
 ```bash
-# Context7 service installer reads this key from the environment
+# Context7 setup reads this key from the environment
 export CONTEXT7_API_KEY="your-key-here"
 
 # Playwright browsers, for Pest Browser checks

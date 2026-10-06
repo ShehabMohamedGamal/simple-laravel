@@ -1,0 +1,38 @@
+name: Context7 cache package
+
+on:
+  push:
+    paths:
+      - 'packages/context7-cache/**'
+      - '.github/workflows/context7-cache.yml'
+  pull_request:
+    paths:
+      - 'packages/context7-cache/**'
+      - '.github/workflows/context7-cache.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: packages/context7-cache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm test
+      - run: npm pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: context7-cache-${{ matrix.os }}-node-${{ matrix.node }}
+          path: packages/context7-cache/*.tgz
