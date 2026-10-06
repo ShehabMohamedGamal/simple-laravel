@@ -11,7 +11,7 @@ Add a line when a new capability appears. Keep one line per capability.
 | Implementation loop | skill | `implement-loop` | prep setup, build toolbench, wrap-up verify-as-feedback gates, fix-round budget |
 | Test-driven development | skill | `tdd-lite` | red-green loop, test seams, test anti-patterns |
 | Laravel ecosystem work | skill | `laravel` | backend rules, test design, Tailwind v4, one-shot `pest --agent` checks |
-| Repository index queries | tool | `codebase-index` | symbol tracing, references, evidence-backed repository questions; retrieval commands only (`impact`, `diff-impact`, `architecture`, `graph` are banned) |
+| Repository index queries | tool | `codebase-index` | repository investigation; follow the Codebase index section in `AGENTS.md` |
 
 ## Agents
 

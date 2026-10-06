@@ -18,6 +18,29 @@ Open every grilling interview with the session setup in `docs/agents/grilling-se
 
 Docs fallthrough: MCP → `docs/agents/llms/` slices → Context7 (max 2) → web. See `docs/agents/docs-retrieval.md`.
 
+### Codebase index
+
+Find → Trace. Before investigating repository implementation, symbols, references, dependencies, data flow, or bugs, query the `codebase_index` tool. Prefer a direct index query over an Explore subagent or broad repository scan. Delegate exploration only when indexed evidence and targeted lookups cannot answer the question.
+
+If the tool is unavailable, use `bash scripts/codebase-index.sh query <command> <arguments> --json` or `./scripts/codebase-index.ps1 query <command> <arguments> --json`. These wrappers prevent implicit builds and skill updates. The table gives the retrieval command and arguments.
+
+| Question | Command |
+| --- | --- |
+| Where is X implemented? | `search "X"` |
+| Find a named symbol | `symbol "X"` |
+| Who calls or references X? | `refs "X"` |
+| How does X work? | `explain "X"` |
+| Describe a file or symbol | `describe "X"` |
+| How are X and Y connected? | `path "X" "Y"` |
+
+Use the default hybrid search for mixed questions, `--mode symbol` for exact symbols, and `--mode fts` for text or error messages. Use `--mode vector` only when embeddings are enabled and the exact vocabulary is unknown. Never run `impact`, `diff-impact`, `architecture`, or `graph`.
+
+Start with ranks 1–3. Read `recommended_reads` line ranges rather than whole files. Trace another hop only when behavior or ownership requires it. If a skeletonized snippet omits relevant code, read its supplied range.
+
+Check index freshness and result confidence before trusting evidence. Agents only retrieve; the OpenCode plugin owns automatic indexing. Never run `index`, `update`, or the control script's `refresh` to repair a query. For missing, stale, unavailable, or low-confidence evidence, use narrow grep/glob lookups and confirm claims against current files. Follow `fallback_suggestions` when available.
+
+On `refs`, partial coverage makes an empty result inconclusive; confirm absence with targeted grep. Treat extracted edges as parser evidence and inferred or ambiguous edges as uncertain. Answer with the direct conclusion and supporting `file:line` evidence. State uncertainty when it affects the conclusion; omit search narration.
+
 ### AI rules
 
 `.ai/rules/` holds code conventions scoped by glob. Read `.ai/rules/index.md` and every rule file whose globs match the paths you are editing before you write code.

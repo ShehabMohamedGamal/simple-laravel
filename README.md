@@ -12,7 +12,7 @@ A Laravel starter template engineered for AI coding agents. It ships a custom Op
 
 ## Features
 
-- Custom OpenCode harness: five specialized agents, five plugins, two commands, and two MCP servers, all versioned with the repo.
+- Custom OpenCode harness: five specialized agents, six plugins, two commands, and two MCP servers, all versioned with the repo.
 - `composer verify`: one command that runs three hard gates and eight report steps on every change.
 - Beads (`bd`) issue tracking, so agent work survives across sessions.
 - Pest 5 with Laravel, Agent, Browser, Faker, PHPStan, Rector, Stressless, and type-coverage plugins.
@@ -57,6 +57,7 @@ The harness lives in `.opencode/` and `.agents/skills/` and loads automatically 
 | `session-log` | Logs every session to `.opencode/logs/` for review and handoff |
 | `context7-cache` | Persistent TTL disk cache in front of Context7. Exposes `context7_resolve`, `context7_docs`, `context7_stats`, `context7_clear` |
 | `rtk` | Rewrites bash commands through `rtk rewrite` for token savings. Self-disables with a warning if the `rtk` binary is missing |
+| `codebase-index` | Maintains the local index automatically and exposes a retrieval-only `codebase_index` tool |
 
 ### Commands
 
@@ -73,7 +74,7 @@ The harness lives in `.opencode/` and `.agents/skills/` and loads automatically 
 |---|---|
 | [Matt Pocock's skill collection](https://github.com/mattpocock/skills) | `ask-matt` (the router over the collection), `grilling`, `grill-me`, `grill-with-docs`, `wait-what`, `wayfinder`, `to-spec`, `to-tickets`, `to-questionnaire`, `triage`, `prototype`, `research`, `handoff`, `diagnosing-bugs`, `domain-modeling`, `codebase-design`, `improve-codebase-architecture`, `resolving-merge-conflicts`, `wizard`, `writing-for-agents` |
 | [Human Layer](https://humanlayer.dev) | `show-me`: visual explanations with diagrams, code-shape sketches, and HTML artifacts |
-| First-party, written for this harness | `beads`, `codebase-index`, `implement-loop`, `self-review`, `setup-ae-harness`, `interview-prep`, `prd-builder`, `competitor-research`, `laravel` (merged from the Laravel Boost skills), `tdd-lite` (a first-party variant of Matt Pocock's `tdd`, adapted to the verify chain) |
+| First-party, written for this harness | `beads`, `implement-loop`, `self-review`, `setup-ae-harness`, `interview-prep`, `prd-builder`, `competitor-research`, `laravel` (merged from the Laravel Boost skills), `tdd-lite` (a first-party variant of Matt Pocock's `tdd`, adapted to the verify chain) |
 
 Skills resolve through the capability registry in `docs/agents/registry.md`. Agents never hardcode skill names.
 
@@ -96,6 +97,52 @@ No. Start OpenCode in a clone of this repo and the harness installs itself:
 | Skills: the full set under `.agents/skills/` | Versioned with the repo, loaded on demand through `docs/agents/registry.md` | None |
 
 Three optional per-machine items need manual setup: the `rtk` binary (see the RTK setup section), Chrome for the `chrome-devtools` server, and `CONTEXT7_API_KEY` for the Context7 cache.
+
+Codebase Index also needs Python and an installed `codebase-index` CLI. See the setup section below. Its policy lives in `AGENTS.md`, not a skill.
+
+### Codebase index setup
+
+The OpenCode plugin builds a missing index at startup, debounces agent edits, and checks for outside changes every 30 seconds. It keeps one maintenance process active per plugin instance and locks writes per checkout. It uses the CLI's file discovery and ignore rules, so cache files do not trigger indexing loops. Missing tools or provider failures produce warnings instead of stopping agent work.
+
+Automatic indexing is on by default. Embeddings are off by default. Agents use the `codebase_index` tool for `symbol`, `search`, `refs`, `explain`, `describe`, and `path`. The tool exposes no maintenance commands. The wrappers reject the four prohibited commands and refuse to build a missing index during retrieval.
+
+Run the repeatable wizard to choose automatic indexing, an embedding provider, its model, and its endpoint:
+
+```bash
+bash scripts/setup-codebase-index.sh
+```
+
+```powershell
+./scripts/setup-codebase-index.ps1
+```
+
+Both wizards validate the provider before replacing the configuration. They ask before applying settings and refreshing the index. Candidate API keys stay in memory until confirmation and successful validation; cancellation or failed validation preserves the saved key. The Ollama preset uses `http://localhost:11434/v1/embeddings` and defaults to `unclemusclez/jina-embeddings-v2-base-code:latest`. Choose the exact tag listed by your Ollama server. You can also choose another local Sentence Transformers model or an authenticated OpenAI-compatible endpoint.
+
+The runner uses an importable Codebase Index package or the Python interpreter beside the installed CLI, including pipx installations. Set `CBX_PYTHON` if your interpreter lives elsewhere. This integration is tested against Codebase Index 1.9.0. Embeddings also require the CLI's optional `sqlite-vec` support; the local backend requires Sentence Transformers. The scripts do not install packages or models for you. Selecting a local model can download its files through Sentence Transformers.
+
+All machine-local files live in the ignored `.claude/cache/codebase-index/` directory:
+
+- `config.json` holds the canonical CLI and automation settings.
+- `setup.env` remembers wizard answers. It does not control the index directly.
+- `credentials.env` holds an optional external API key. `CBX_EMBEDDINGS_API_KEY` in the process environment takes precedence. Keep this file private; on Windows, check the directory's inherited access permissions.
+- `index.sqlite` holds the index. Model, endpoint, or dimension changes replace incompatible vectors automatically. Content-addressed vectors remain reusable only under the same provider/model/dimension identity.
+
+The loopback-only Ollama preset supplies a non-secret placeholder key. Remote endpoints require HTTPS and an explicit key. Enabled embeddings send indexed code chunks to the selected endpoint. No settings or keys go to GitHub or Laravel's application `.env`.
+
+Use the same controls without the wizard:
+
+```bash
+bash scripts/codebase-index.sh status
+bash scripts/codebase-index.sh configure --embeddings off
+bash scripts/codebase-index.sh configure --auto off
+bash scripts/codebase-index.sh configure --embeddings ollama --model unclemusclez/jina-embeddings-v2-base-code:latest
+bash scripts/codebase-index.sh test-provider
+bash scripts/codebase-index.sh query search "authentication" --json
+```
+
+PowerShell accepts the same arguments through `./scripts/codebase-index.ps1`. An operator can run `refresh` or `refresh --rebuild` explicitly. Agents leave maintenance to the plugin. If embeddings fail, automatic maintenance keeps text and symbol retrieval working and retries embeddings later.
+
+Run the integration checks with `python3 scripts/test-codebase-index.py` and `node --test scripts/test-codebase-index-plugin.mjs`. The plugin test uses Node 22.18 or newer for native TypeScript loading. A Python environment with the installed CLI and its embedding extras is required for vector tests.
 
 ### RTK setup
 
