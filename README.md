@@ -55,7 +55,6 @@ The harness lives in `.opencode/` and `.agents/skills/` and loads automatically 
 | `no-comments` | Blocks any edit that adds a comment. Zero comments allowed; self-documenting code is the bar |
 | `no-memory` | Blocks memory tools. Durable knowledge belongs in beads issues, not agent memory |
 | `session-log` | Logs every session to `.opencode/logs/` for review and handoff |
-| `context7-cache` | Persistent TTL disk cache in front of Context7. Exposes `context7_resolve`, `context7_docs`, `context7_stats`, `context7_clear` |
 | `rtk` | Rewrites bash commands through `rtk rewrite` for token savings. Self-disables with a warning if the `rtk` binary is missing |
 | `codebase-index` | Maintains the local index automatically and exposes a retrieval-only `codebase_index` tool |
 
@@ -84,21 +83,51 @@ Skills resolve through the capability registry in `docs/agents/registry.md`. Age
 |---|---|---|
 | `laravel-boost` | Project config, via `php artisan boost:mcp` | Laravel docs search, database schema and query tools, browser logs |
 | `chrome-devtools` | Project config, via `npx chrome-devtools-mcp@latest` | Browser control and inspection for frontend work |
+| `context7` | Global config, via local HTTP user service | Shared persistent Context7 documentation cache across MCP clients |
 
 ### Do I need to install anything?
 
-No. Start OpenCode in a clone of this repo and the harness installs itself:
+Start OpenCode in a clone of this repo and the project integrations load automatically. The optional shared Context7 service needs a one-time install:
 
 | Component | How it installs | Your action |
 |---|---|---|
 | npm plugins: `opencode-openai-codex-auth`, `opencode-pty`, `@opencode-trace/plugin` | OpenCode installs them with Bun at first startup and caches them under `~/.cache/opencode/node_modules` | None |
-| File plugins: `no-comments`, `no-memory`, `session-log`, `context7-cache`, `rtk` | Loaded from `.opencode/plugins/` at startup, versioned with the repo | None |
+| File plugins: `no-comments`, `no-memory`, `session-log`, `rtk` | Loaded from `.opencode/plugins/` at startup, versioned with the repo | None |
 | MCP servers: `laravel-boost`, `chrome-devtools` | OpenCode launches them from `opencode.json` on each session. `npx` fetches `chrome-devtools-mcp` on first run; `boost:mcp` works after `composer install` | None |
 | Skills: the full set under `.agents/skills/` | Versioned with the repo, loaded on demand through `docs/agents/registry.md` | None |
+| Context7 cache MCP service | Installed once per machine, independent of OpenCode | See Context7 setup below |
 
-Three optional per-machine items need manual setup: the `rtk` binary (see the RTK setup section), Chrome for the `chrome-devtools` server, and `CONTEXT7_API_KEY` for the Context7 cache.
+Three optional per-machine items need manual setup: the `rtk` binary (see the RTK setup section), Chrome for the `chrome-devtools` server, and the Context7 cache service.
 
 Codebase Index also needs Python and an installed `codebase-index` CLI. See the setup section below. Its policy lives in `AGENTS.md`, not a skill.
+
+### Context7 setup
+
+The cache is a standalone Streamable HTTP MCP server supporting protocol revisions `2025-06-18` and `2025-11-25`. It does not support legacy SSE or older batch-based revisions. It uses Node 22 or newer, has no npm dependencies, and binds only to `127.0.0.1`. Install it on Linux with a systemd user manager:
+
+```sh
+export CONTEXT7_API_KEY="your-key-here"
+sh scripts/install-context7-cache.sh
+opencode mcp add context7 --global --url http://127.0.0.1:3777/mcp
+opencode mcp list
+```
+
+Set `oauth: false` on the `context7` entry under `mcp.servers` in global OpenCode config. The installer copies the server to `~/.local/bin/context7-cache.mjs`, saves service settings and API keys in the owner-only `~/.config/context7-cache.env`, and enables `context7-cache.service` at user login. It respects `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`. Run the installer again after changing the source or exported settings.
+
+Configure other MCP clients to use the same Streamable HTTP URL, `http://127.0.0.1:3777/mcp`, instead of the official Context7 endpoint. Client configuration formats differ. No Context7 API key is needed in each client. The endpoint trusts local processes and is not intended for network exposure. It rejects foreign browser origins and Host headers.
+
+The tools are `resolve-library-id`, `query-docs`, `cache-stats`, and `cache-clear`. Resolve results expire after 30 days; docs expire after 7 days. Cache hits work without API keys. Simultaneous identical requests share one upstream call. Errors are not cached, and HTTP 429 responses rotate through `CONTEXT7_API_KEY` and `CONTEXT7_API_KEY1` through `CONTEXT7_API_KEY50`.
+
+The service reuses the old plugin's cache format and directory, normally `~/.cache/context7-cache`. `CTX7_CACHE_DIR` overrides the directory. `CTX7_CACHE_TTL_SEARCH_MS` and `CTX7_CACHE_TTL_DOCS_MS` override expiry, `CTX7_CACHE_DISABLED=1` bypasses the cache, and `CTX7_PORT` changes the listening port. Update client URLs when changing the port. `cache-clear` accepts a library/query substring for new entries; old entries match their stored content because they have no query metadata.
+
+```sh
+systemctl --user status context7-cache.service
+systemctl --user restart context7-cache.service
+journalctl --user -u context7-cache.service
+node --test scripts/test-context7-cache.mjs
+```
+
+Without systemd, run `node scripts/context7-cache.mjs` with the same exported environment variables. Keep that process running while clients use it.
 
 ### Codebase index setup
 
@@ -229,7 +258,7 @@ php artisan serve
 
 `composer setup` does the same in one step: it installs dependencies, copies the environment file, generates the key, migrates, and builds the frontend.
 
-Start OpenCode in the repo once and the plugins and MCP servers install and load automatically. Only the optional `rtk` binary needs a manual install (see the RTK setup section).
+Start OpenCode in the repo once and the project plugins and MCP servers install and load automatically. The optional `rtk` binary and shared Context7 service need manual setup.
 
 > [!TIP]
 > Install Laravel Boost's guidelines into your agent clients with `php artisan boost:mcp --install`. Clients already covered by `boost.json`: Claude Code, Codex, OpenCode, and Zed.
@@ -249,7 +278,7 @@ QUEUE_CONNECTION=database
 Optional integrations:
 
 ```bash
-# Context7 docs cache (any number of keys; the plugin rotates through them)
+# Context7 service installer reads this key from the environment
 export CONTEXT7_API_KEY="your-key-here"
 
 # Playwright browsers, for Pest Browser checks
