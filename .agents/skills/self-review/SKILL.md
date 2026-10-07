@@ -72,15 +72,15 @@ Present the report under `## Standards`, `## Spec`, and `## Correctness` heading
 
 End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a single winner across axes: that's the reranking the separation exists to prevent.
 
-### 6. Deterministic gates (hard)
+### 6. Deterministic checks (advisory)
 
-Run before presenting. Pathspecs come from the project's `scripts/feedback/no-comments.config.json`; enforce against the working diff via the single-source gate script:
+Run before presenting. Check docblock coverage against the working tree:
 
 ```bash
-sh scripts/feedback/no-comments.sh --config
+php scripts/feedback/docs-coverage.php
 ```
 
-Exit 0 CLEAN, 1 COMMENTS_FOUND. The implementer deletes every flagged line and re-runs; unfixable = report + exit 1. No allowlist: zero added comment lines, no ticket numbers in code.
+The script always exits 0. Report every line it prints as a Standards-axis finding, marked advisory: the same output runs as a `report:` step in `composer verify`, so a finding here never blocks the change on its own.
 
 Test-shape scope: tests must sit at recorded seams; flag coupled, tautological, overlapping, niche-edge-spam, library-testing, and trivial tests per the `tdd-lite` skill.
 

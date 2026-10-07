@@ -23,12 +23,12 @@ The toolbench sits alongside the loop. It lists what exists and where the how li
 | --- | --- |
 | Laravel docs, schema and data questions, one-shot `pest --agent` checks, browser logs | `laravel` skill |
 | Symbol tracing, references, repository questions | `codebase-index` CLI; retrieval commands only, `impact`, `diff-impact`, `architecture`, and `graph` are banned |
-| Version-correct library docs | docs retrieval fallthrough, how in `docs/agents/docs-retrieval.md` |
+| Version-correct library docs | docs retrieval fallthrough before any library API call, how in `docs/agents/docs-retrieval.md` |
 
 ## Wrap-up
 
-1. Stage the work: `git add -A`, so the no-comments gate sees the staged diff.
-2. `composer verify` — the commit gate, run as feedback. Three gates decide the result, each with its own label: the no-comments gate on the staged diff, pest , and type coverage at a minimum of 80 percent. The remaining steps print raw tool output under `report:` labels (pint, deptrac, phpstan, the mutation score on the session's new tests, CRAP values for staged app classes, phpmetrics, audit). The report output is feedback for you: act on it in the fix rounds, and never weaken a gate because of it. A failed chain ends with a `FAILED GATES:` line naming the gates to fix.
+1. Stage the work: `git add -A`.
+2. `composer verify` is the commit gate, run as feedback. Two gates decide the result, each with its own label: pest, and type coverage at a minimum of 80 percent. The remaining steps print raw tool output under `report:` labels (docs-coverage on app/ docblocks, pint, deptrac, phpstan, the mutation score on the session's new tests, CRAP values for staged app classes, phpmetrics, audit). The report output is feedback for you: act on it in the fix rounds, and never weaken a gate because of it. A failed chain ends with a `FAILED GATES:` line naming the gates to fix.
 3. `/self-review` once, passing the pinned fixed point and the ticket.
 
 ## Fix rounds

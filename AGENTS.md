@@ -16,7 +16,7 @@ Open every grilling interview with the session setup in `docs/agents/grilling-se
 
 ### Docs retrieval
 
-Docs fallthrough: MCP → `docs/agents/llms/` slices → Context7 (max 2) → web. See `docs/agents/docs-retrieval.md`.
+Ground every library API call in version-correct docs before writing it. Fall through MCP → `docs/agents/llms/` slices → Context7 → web, and save Context7 hits as slices. See `docs/agents/docs-retrieval.md`.
 
 ### Codebase index
 
@@ -49,7 +49,7 @@ On `refs`, partial coverage makes an empty result inconclusive; confirm absence 
 
 Stage the work and run `composer verify` before you commit. Treat gate failures as findings and fix them.
 
-Three gates decide the result: the no-comments gate on the staged diff, pest in parallel, and type coverage at a minimum of 80 percent. A failure ends with a `FAILED GATES:` line naming the failed gates. Never weaken a gate, an ignore pattern, or a test to make a failure disappear.
+Two gates decide the result: pest in parallel, and type coverage at a minimum of 80 percent. A failure ends with a `FAILED GATES:` line naming the failed gates. Never weaken a gate, an ignore pattern, or a test to make a failure disappear.
 
 Steps labeled `report:` never fail the chain and carry no threshold. Their output is feedback for the agent: act on what it surfaces, and never weaken a gate because of it.
 

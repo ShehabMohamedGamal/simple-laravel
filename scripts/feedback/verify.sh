@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # Verify chain. Every step runs to the end; nothing stops mid-chain.
-# The three gates decide the exit status, collected and reported at the
+# The two gates decide the exit status, collected and reported at the
 # end. Report steps print raw tool output and never affect the result.
 # Step output is tidied (noise lines dropped) before printing; the
 # tool's own exit status is captured before the pipe.
@@ -28,10 +28,10 @@ run_report() {
   printf '%s\n' "$out" | php scripts/feedback/tidy.php || true
 }
 
-run_gate no-comments sh scripts/feedback/no-comments.sh --staged --config
 run_gate pest env PAO_FORCE=1 vendor/bin/pest --parallel
 run_gate type-coverage env PAO_FORCE=1 vendor/bin/pest --type-coverage --min=80
 
+run_report docs-coverage php scripts/feedback/docs-coverage.php
 run_report pint vendor/bin/pint --test --format=json
 run_report deptrac vendor/bin/deptrac analyse --no-progress
 run_report phpstan env PAO_FORCE=1 vendor/bin/phpstan analyse --memory-limit=1G

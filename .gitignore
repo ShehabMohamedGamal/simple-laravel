@@ -42,3 +42,6 @@ Thumbs.db
 
 # codebase-index cache (machine-local; do not commit)
 .claude/cache/codebase-index/
+
+# Rendered API docs (composer docs)
+docs/api/

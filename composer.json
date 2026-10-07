@@ -33,6 +33,7 @@
         "pestphp/pest-plugin-rector": "^5.0",
         "pestphp/pest-plugin-stressless": "^5.0",
         "pestphp/pest-plugin-type-coverage": "^5.0",
+        "phpdocumentor/shim": "^3.10",
         "phpmetrics/phpmetrics": "^2.11",
         "phpstan/phpstan-deprecation-rules": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.0",
@@ -73,6 +74,9 @@
         ],
         "deptrac": [
             "vendor/bin/deptrac analyse --no-progress"
+        ],
+        "docs": [
+            "vendor/bin/phpdoc"
         ],
         "mutate": [
             "Composer\\Config::disableProcessTimeout",
@@ -118,7 +122,8 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "phpdocumentor/shim": true
         }
     },
     "minimum-stability": "stable",
