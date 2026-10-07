@@ -6,7 +6,7 @@
 // Exit 0 in every path; never fails the verify chain.
 
 $staged = array_values(array_filter(
-    explode("\n", (string) shell_exec('git diff --cached --name-only --diff-filter=ACM -- app')),
+    explode("\n", (string) shell_exec('git diff --cached --name-only --relative --diff-filter=ACM -- app')),
     fn (string $f): bool => str_ends_with($f, '.php') && is_file($f),
 ));
 

@@ -1,6 +1,6 @@
 set -eu
 
-staged=$(git diff --cached --name-only --diff-filter=ACM -- app | grep '\.php$' || true)
+staged=$(git diff --cached --name-only --relative --diff-filter=ACM -- app | grep '\.php$' || true)
 if [ -z "$staged" ]; then
   echo "crap: no app files staged; nothing to report."
   exit 0
