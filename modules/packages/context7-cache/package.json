@@ -1,0 +1,11 @@
+{
+  "name": "context7-cache-mcp",
+  "version": "0.1.0",
+  "description": "Shared persistent Context7 cache with HTTP MCP and a stdio bridge",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=22" },
+  "bin": { "context7-cache": "bin/context7-cache.mjs" },
+  "files": ["bin", "src", "README.md"],
+  "scripts": { "test": "node --test", "prepublishOnly": "npm test" }
+}

@@ -1,0 +1,19 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/pestphp/pest-plugin-phpstan/extension.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+    - vendor/phpstan/phpstan-deprecation-rules/rules.neon
+
+parameters:
+    paths:
+        - app
+        - Modules
+        - tests
+        - routes
+    level: 6
+    checkModelProperties: true
+    reportUnmatchedIgnoredErrors: true
+    checkUnusedViews: true
+
+    excludePaths:
+        - tests/Pest.php

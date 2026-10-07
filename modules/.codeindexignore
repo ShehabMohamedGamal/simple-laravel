@@ -1,0 +1,89 @@
+# .codeindexignore — codebase-index's own ignore file (highest specificity).
+# Keeps the index focused on YOUR application code, not vendored/generated/
+# tooling noise. Comments explain why each block exists so it's easy to
+# trim or extend later.
+
+# ── PHP dependencies ────────────────────────────────────────────────
+vendor/
+composer.phar
+
+# ── Node / front-end tooling ─────────────────────────────────────────
+node_modules/
+bower_components/
+
+# ── Compiled / bundled front-end output ──────────────────────────────
+# Vite/Mix output and anything Filament publishes into public/ is
+# minified vendor JS, not application code — see the filament/ case.
+public/build/
+public/hot
+public/vendor/
+public/js/
+public/css/
+public/mix-manifest.json
+public/*.js
+public/*.css
+
+# ── Laravel runtime / generated ──────────────────────────────────────
+storage/framework/
+storage/logs/
+storage/app/
+storage/debugbar/
+bootstrap/cache/
+.phpunit.cache/
+.phpunit.result.cache
+
+# ── Env & secrets (belt-and-suspenders; codebase-index also excludes
+#    these by filename pattern, but explicit is cheap) ────────────────
+.env
+.env.*
+!.env.example
+
+# ── AI agent / assistant scaffolding ─────────────────────────────────
+# Skills, agent configs, and CLI-specific instruction files aren't
+# application code — indexing them just pollutes retrieval with
+# meta-instructions instead of PHP.
+.claude/
+.codex/
+.opencode/
+.agents/
+.agent/
+AGENTS.md
+CLAUDE.md
+skills/
+.claude-plugin/
+.cursor/
+.windsurf/
+.github/copilot-instructions.md
+
+# ── Module generator stubs (template pseudo-code, not runnable code) ──
+# The $TOKEN$ placeholders and duplicated class skeletons would pollute
+# retrieval for every module class they mirror. Modules/ itself stays
+# fully indexed; see docs/module-structure.md.
+stubs/modules/
+
+# ── Beads issue store (JSON, not code) ────────────────────────────────
+.beads/
+
+# ── codebase-index's own cache (never index yourself) ─────────────────
+.claude/cache/codebase-index/
+
+# ── Editor / OS junk ──────────────────────────────────────────────────
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ── VCS ────────────────────────────────────────────────────────────────
+.git/
+.gitattributes
+
+# ── Test coverage / build artifacts ────────────────────────────────────
+coverage/
+.phpunit.cache/
+*.log
+
+# ── Lockfiles (huge, no retrieval value as "code") ──────────────────────
+composer.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

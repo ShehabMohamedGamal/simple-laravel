@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace $NAMESPACE$;
+
+use $MODULE_NAMESPACE$\$STUDLY_NAME$\Database\Factories\$CLASS$Factory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+#[Fillable($FILLABLE$)]
+final class $CLASS$ extends Model
+{
+    use HasFactory;
+
+    protected static function newFactory(): $CLASS$Factory
+    {
+        return $CLASS$Factory::new();
+    }
+}

@@ -1,0 +1,11 @@
+<?php
+
+declare(strict_types=1);
+
+namespace $CLASS_NAMESPACE$;
+
+use $CONTRACT_NAMESPACE$\$CONTRACT$;
+
+final class $CLASS$ implements $CONTRACT$
+{
+}

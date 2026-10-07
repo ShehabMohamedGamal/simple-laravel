@@ -1,0 +1,43 @@
+import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
+import { test } from "node:test";
+import { createServer } from "node:net";
+
+test("npm tarball installs a CLI without depending on repository files", async (t) => {
+  const dir = await mkdtemp(join(process.env.OPENCODE_TEST_TMP || tmpdir(), "context7-package-"));
+  let stopInstalled;
+  t.after(async () => {
+    await stopInstalled?.().catch(() => {});
+    await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  });
+  const root = fileURLToPath(new URL("../", import.meta.url));
+  const npm = process.env.npm_execpath;
+  assert.ok(npm, "Run this test through npm test");
+  const exec = promisify(execFile);
+  const packed = await exec(process.execPath, [npm, "pack", root, "--pack-destination", dir, "--json"], { timeout: 30000 });
+  const result = JSON.parse(packed.stdout);
+  const info = Array.isArray(result) ? result[0] : Object.values(result)[0];
+  assert.ok(info.files.some((file) => file.path === "README.md"));
+  assert.ok(info.files.every((file) => !file.path.startsWith("test/") && !file.path.endsWith(".env")));
+  const prefix = join(dir, "prefix");
+  await exec(process.execPath, [npm, "install", "--global", "--prefix", prefix, join(dir, info.filename), "--ignore-scripts", "--no-audit", "--no-fund"], { timeout: 30000 });
+  const installed = join(prefix, ...(process.platform === "win32" ? [] : ["lib"]), "node_modules", "context7-cache-mcp", "bin", "context7-cache.mjs");
+  const help = await exec(process.execPath, [installed, "--help"], { cwd: dir, timeout: 10000 });
+  assert.ok(help.stdout.includes("context7-cache setup"));
+  const socket = createServer();
+  await new Promise((resolve) => socket.listen(0, "127.0.0.1", resolve));
+  const port = socket.address().port;
+  await new Promise((resolve) => socket.close(resolve));
+  const env = { ...process.env, CTX7_CONFIG_DIR: join(dir, "settings"), CTX7_CACHE_DIR: join(dir, "cache"), CTX7_PORT: String(port), CONTEXT7_API_KEY: "test-key" };
+  const run = (...args) => exec(process.execPath, [installed, ...args], { env, cwd: dir, timeout: 15000 });
+  stopInstalled = () => run("stop");
+  await run("setup");
+  assert.equal(JSON.parse((await run("start")).stdout).running, true);
+  assert.equal(JSON.parse((await run("status")).stdout).running, true);
+  await run("stop");
+});

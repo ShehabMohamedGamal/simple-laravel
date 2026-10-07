@@ -1,6 +1,6 @@
 set -eu
 
-new_tests=$(git diff --cached --name-only --relative --diff-filter=A -- tests | grep -E '^tests/(Unit|Feature)/[^/]+Test\.php$' || true)
+new_tests=$(git diff --cached --name-only --relative --diff-filter=A -- tests Modules | grep -E '^(tests|Modules/[^/]+/tests)/(Unit|Feature)/[^/]+Test\.php$' || true)
 if [ -z "$new_tests" ]; then
   echo "mutation: no new test files staged; nothing to report."
   exit 0

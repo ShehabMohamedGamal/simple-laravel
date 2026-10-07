@@ -1,0 +1,14 @@
+{
+    "name": "Users",
+    "alias": "users",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Users\\Providers\\UsersServiceProvider"
+    ],
+    "files": [],
+    "conventions": {
+        "dataAccess": "eloquent"
+    }
+}

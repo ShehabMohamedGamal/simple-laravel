@@ -1,0 +1,12 @@
+<?php
+
+use Illuminate\Support\Facades\DB;
+use Modules\Users\Models\User;
+
+it('writes to its own process database', function () {
+    expect(getenv('DB_DATABASE'))->toStartWith('testing');
+
+    User::factory()->create(['email' => 'parallel-smoke@example.test']);
+
+    expect(DB::table('users')->count())->toBe(1);
+});
